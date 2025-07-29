@@ -1,0 +1,4 @@
+llama.cpp/
+llm-models/*/*.gguf
+venv/
+__pycache__/

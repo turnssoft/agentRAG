@@ -1,0 +1,4 @@
+When working on the agentRAG project from the ubuntu WSL terminal, you should source the .env file and the venv using the following commands:
+cd ~/git/agentRAG
+source ~/git/agentRAG/.env
+source ~/git/agentRAG/venv/bin/activate
