@@ -1,0 +1,50 @@
+# playbook_deploy_pos.yml
+# Description: Ansible playbook to deploy or update the Pizza Boys Point-of-Sale (POS) application.
+# Target: All in-store POS terminals.
+
+- name: Deploy Pizza Boys POS System
+  hosts: pos_terminals
+  become: yes
+  vars:
+    pos_app_version: "2.5.1"
+    pos_source_path: "/opt/app_builds/pos_v{{ pos_app_version }}.tar.gz"
+    pos_install_dir: "/usr/share/pizzaboys/pos"
+
+  tasks:
+    - name: Ensure installation directory exists
+      ansible.builtin.file:
+        path: "{{ pos_install_dir }}"
+        state: directory
+        owner: 'www-data'
+        group: 'www-data'
+        mode: '0755'
+
+    - name: Stop existing POS service to prevent conflicts
+      ansible.builtin.service:
+        name: pizzaboys-pos
+        state: stopped
+      ignore_errors: yes
+
+    - name: Unarchive the new POS application build
+      ansible.builtin.unarchive:
+        src: "{{ pos_source_path }}"
+        dest: "{{ pos_install_dir }}"
+        remote_src: yes
+        owner: 'www-data'
+        group: 'www-data'
+      notify: Restart POS Service
+
+    - name: Ensure correct permissions on application files
+      ansible.builtin.file:
+        path: "{{ pos_install_dir }}"
+        state: directory
+        recurse: yes
+        owner: 'www-data'
+        group: 'www-data'
+
+  handlers:
+    - name: Restart POS Service
+      ansible.builtin.service:
+        name: pizzaboys-pos
+        state: restarted
+        enabled: yes
