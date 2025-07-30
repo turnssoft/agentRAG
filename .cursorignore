@@ -2,4 +2,4 @@ venv/
 llm-project/
 _pycache_/
 .git/
-.gitignore
+.cursorignore
