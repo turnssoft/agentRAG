@@ -84,7 +84,6 @@ embeddings = LocalEmbeddings(
     model=EMBEDDING_MODEL
 )
 
-
 def load_csv(path: str) -> list[Document]:
     print(f"Loading CSV file: {path}")
     try:
@@ -92,12 +91,9 @@ def load_csv(path: str) -> list[Document]:
         raw_docs = loader.load()
         return raw_docs
     except Exception as e:
-        print(f"CSVLoader failed, aborting. Error: {e}")
-        return []
-
-
-
-
+        print(f"\n❌ CSV loader failed ({e}), falling back to TextLoader")
+        loader = TextLoader(path, encoding="utf-8")
+        return loader.load_and_split()
 def load_python(path: str) -> list[Document]:
     print(f"Loading Python file: {path}")
     try:
@@ -125,7 +121,6 @@ def load_python(path: str) -> list[Document]:
         raw_docs = loader.load()
         splitter = RecursiveCharacterTextSplitter(chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP)
         return splitter.split_documents(raw_docs)
-
 def load_yaml(path: str) -> list[Document]:
     try:
         loader = TextLoader(path, encoding="utf-8")
@@ -137,7 +132,6 @@ def load_yaml(path: str) -> list[Document]:
         raw_docs = loader.load()
         splitter = RecursiveCharacterTextSplitter(chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP)
         return splitter.split_documents(raw_docs)
-
 def load_ansible_yaml(path: str) -> list[Document]:
     print(f"Parsing Ansible YAML: {path}")
     documents = []
@@ -168,7 +162,6 @@ def load_ansible_yaml(path: str) -> list[Document]:
             )
             documents.append(doc)
     return documents
-
 def load_markdown(path: str) -> list[Document]:
     print(f"Loading markdown file: {path}")
     try:
@@ -177,10 +170,9 @@ def load_markdown(path: str) -> list[Document]:
         splitter = RecursiveCharacterTextSplitter(chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP)
         return splitter.split_documents(raw_docs)
     except Exception as e:
-        print(f"Markdown loader failed ({e}), falling back to TextLoader")
+        print(f"\n ❌ Markdown loader failed ({e}), falling back to TextLoader")
         loader = TextLoader(path, encoding="utf-8")
         return loader.load_and_split()
-
 def load_html(path: str) -> list[Document]:
     print(f"Loading HTML file: {path}")
     try:
@@ -228,16 +220,15 @@ if add_documents and documents:
             continue
         print(f"✅ Adding Document #{i}")
         print(f"  → type: {type(doc)}")
-        print(f"  → content: {doc.page_content[:60]}")
+        print(f"  → content: {doc.page_content}")
         print(f"  → metadata: {doc.metadata}")
         try:
-            # doc.metadata = filter_complex_metadata(doc.metadata)
+            doc.metadata = filter_complex_metadata(doc.metadata)
             vector_store.add_documents([doc])
         except Exception as e:
             print(f"\n❌ Failed to add document #{i}")
             print(f"  → Metadata: {doc.metadata}")
             print(f"  → Error: {e}")
-
 
 # ─── Retriever ─────────────────────────────────────────────────────────────
 retriever = vector_store.as_retriever(search_kwargs={"k": TOP_K})

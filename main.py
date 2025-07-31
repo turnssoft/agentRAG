@@ -14,12 +14,14 @@ LLM_HOST            = os.getenv("LLM_HOST", "http://localhost:12434")
 LLM_ENGINE          = os.getenv("LLM_ENGINE", "llama.cpp")
 MODEL_NAME          = os.getenv("OLLAMA_MODEL", "ai/llama3.2:latest")
 SYSTEM_CONTENT      = os.getenv("ROLE_SYSTEM_CONTENT", "You are a helpful assistant.")
-PROMPT_TEMPLATE_STR = os.getenv(
-    "PROMPT_TEMPLATE",
-    "You are an expert in answering questions about a pizza restaurant.\n\n"
-    "Here are some relevant reviews: {reviews}\n\n"
-    "Here is the question to answer: {question}"
-)
+
+# ─── Load prompt template ────────────────────────────────────────────────────
+def load_prompt_template():
+    with open("prompt.txt", encoding="utf-8") as f:
+        return f.read()
+
+# ─── Prompt template ────────────────────────────────────────────────────────
+PROMPT_TEMPLATE_STR = load_prompt_template()
 
 # ─── Local LLM via HTTP ─────────────────────────────────────────────────────
 class LocalLLM(Runnable):
