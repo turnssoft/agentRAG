@@ -10,3 +10,4 @@ unstructured[md]
 nltk
 faiss-cpu
 faiss-cpu
+logging
