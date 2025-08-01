@@ -32,21 +32,27 @@ This project demonstrates a complete RAG implementation that:
 
 - Python 3.8+
 - Docker with model runner service hosting:
-  - Chat completion API (llama.cpp engine)
-  - Embeddings API (llama.cpp engine)
-- Docker model runner running on accessible host (default: `http://localhost:12434`)
+  - Chat completion API (llama.cpp or LLM Studio engine)
+  - Embeddings API (llama.cpp or LLM Studio engine)
+- Docker model runner running on accessible host
 
-### Docker Model Runner Setup
+### Model Runner Setup
 
-The system expects a Docker-based model runner that provides:
+The system supports two different model runner configurations:
 
-1. **Chat Completions API** at `/engines/llama.cpp/v1/chat/completions`
-2. **Embeddings API** at `/engines/llama.cpp/v1/embeddings`
+#### Option 1: llama.cpp Engine
+- **Host**: `http://localhost:12434`
+- **Chat Completions API**: `/engines/llama.cpp/v1/chat/completions`
+- **Embeddings API**: `/engines/llama.cpp/v1/embeddings`
+- **Default Chat Model**: `ai/llama3.2:latest`
+- **Default Embedding Model**: `ai/mxbai-embed-large:latest`
 
-Default models:
-
-- **Chat Model**: `ai/llama3.2:latest`
-- **Embedding Model**: `ai/mxbai-embed-large:latest`
+#### Option 2: LLM Studio Engine
+- **Host**: `http://localhost:1234`
+- **Chat Completions API**: `/v1/chat/completions`
+- **Embeddings API**: `/v1/embeddings`
+- **Default Chat Model**: `liquid/lfm2-1.2b`
+- **Default Embedding Model**: `nomic-embed-text-v1.5`
 
 ## Installation
 
@@ -74,24 +80,59 @@ Default models:
    Create a `.env` file in the project root:
 
    ```bash
-   # Docker model runner configuration
-   LLM_HOST=http://localhost:12434
-   EMBEDDING_HOST=http://localhost:12434
-   DOCKER_HOST=http://localhost:12434
+   # ────────────────────────────────────────────────────────────────────────────
+   # -- Chat Settings ──────────────────────────────────────────────────────────
    
-   # Model configuration
-   OLLAMA_MODEL=ai/llama3.2:latest
-   MODEL=ai/llama3.2:latest
-   EMBEDDING_MODEL=ai/mxbai-embed-large:latest
+   # ─── Chat host ─────────────────────────────────────────────────────────────
+   LLM_HOST=LLM_STUDIO  # Options: LLAMA_CPP or LLM_STUDIO
    
-   # Database configuration
-   DB_LOCATION=./chrome_langchain_db
-   COLLECTION_NAME=restaurant_reviews
-   DATA_FOLDER=./data
+   # ─── Chat host llama.cpp ────────────────────────────────────────────────────
+   LLM_HOST_LLAMA_CPP=http://localhost:12434
+   LLM_PATH_LLAMA_CPP=engines/llama.cpp/v1/chat/completions
+   OLLAMA_MODEL_LLAMA_CPP=ai/llama3.2:latest
    
-   # System configuration
+   # ─── Chat host LLM Studio ────────────────────────────────────────────────────
+   LLM_HOST_LLM_STUDIO=http://localhost:1234
+   LLM_PATH_LLM_STUDIO=v1/chat/completions
+   OLLAMA_MODEL_LLM_STUDIO=liquid/lfm2-1.2b
+   
+   # ─── System & Prompt ────────────────────────────────────────────────────────
    ROLE_SYSTEM_CONTENT=You are a helpful assistant.
+   
+   # ────────────────────────────────────────────────────────────────────────────
+   # -- Embedding Settings ──────────────────────────────────────────────────────
+   
+   # ─── Embedding host ────────────────────────────────────────────────────────
+   EMBEDDING_HOST=LLM_STUDIO  # Options: LLAMA_CPP or LLM_STUDIO
+   
+   # ─── Embedding host llama.cpp ─────────────────────────────────────────────
+   EMBEDDING_HOST_LLAMA_CPP=http://localhost:12434
+   EMBEDDING_PATH_LLAMA_CPP=llama.cpp/v1/embeddings
+   EMBEDDING_MODEL_LLAMA_CPP=ai/mxbai-embed-large
+   EMBEDDING_DIMENSION_LLAMA_CPP=1024
+   
+   # ─── Embedding host LLM Studio ─────────────────────────────────────────────
+   EMBEDDING_HOST_LLM_STUDIO=http://localhost:1234
+   EMBEDDING_PATH_LLM_STUDIO=v1/embeddings
+   EMBEDDING_MODEL_LLM_STUDIO=nomic-embed-text-v1.5
+   EMBEDDING_DIMENSION_LLM_STUDIO=768
+   
+   # ─── Vector store rebuild toggle ───────────────────────────────────────────
    REBUILD_VECTOR=false
+   
+   # ─── ChromaDB backend engine ───────────────────────────────────────────────
+   DB_LOCATION="./faiss_index"
+   COLLECTION_NAME="PizzaBoys"
+   
+   # ─── Data folder ────────────────────────────────────────────────────────────
+   DATA_FOLDER="./data"
+   
+   # ─── Splitter settings ──────────────────────────────────────────────────────
+   CHUNK_SIZE=500
+   CHUNK_OVERLAP=100
+   
+   # ─── Top K for retrieval ───────────────────────────────────────────────────
+   RETRIEVAL_TOP_K=5
    ```
 
 5. **Prepare data files**:
@@ -207,17 +248,41 @@ agentRAG/
 
 ### Environment Variables
 
+#### Chat Configuration
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `LLM_HOST` | `http://localhost:12434` | Docker model runner host for chat |
-| `EMBEDDING_HOST` | `http://localhost:12434` | Docker model runner host for embeddings |
-| `OLLAMA_MODEL` | `ai/llama3.2:latest` | Chat model name |
-| `EMBEDDING_MODEL` | `ai/mxbai-embed-large:latest` | Embedding model name |
-| `DB_LOCATION` | `./chrome_langchain_db` | ChromaDB storage directory |
-| `COLLECTION_NAME` | `restaurant_reviews` | ChromaDB collection name |
+| `LLM_HOST` | `LLM_STUDIO` | Chat host selection (`LLAMA_CPP` or `LLM_STUDIO`) |
+| `LLM_HOST_LLAMA_CPP` | `http://localhost:12434` | llama.cpp host URL |
+| `LLM_PATH_LLAMA_CPP` | `engines/llama.cpp/v1/chat/completions` | llama.cpp chat API path |
+| `OLLAMA_MODEL_LLAMA_CPP` | `ai/llama3.2:latest` | llama.cpp chat model |
+| `LLM_HOST_LLM_STUDIO` | `http://localhost:1234` | LLM Studio host URL |
+| `LLM_PATH_LLM_STUDIO` | `v1/chat/completions` | LLM Studio chat API path |
+| `OLLAMA_MODEL_LLM_STUDIO` | `liquid/lfm2-1.2b` | LLM Studio chat model |
+
+#### Embedding Configuration
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `EMBEDDING_HOST` | `LLM_STUDIO` | Embedding host selection (`LLAMA_CPP` or `LLM_STUDIO`) |
+| `EMBEDDING_HOST_LLAMA_CPP` | `http://localhost:12434` | llama.cpp embedding host URL |
+| `EMBEDDING_PATH_LLAMA_CPP` | `llama.cpp/v1/embeddings` | llama.cpp embedding API path |
+| `EMBEDDING_MODEL_LLAMA_CPP` | `ai/mxbai-embed-large` | llama.cpp embedding model |
+| `EMBEDDING_DIMENSION_LLAMA_CPP` | `1024` | llama.cpp embedding dimension |
+| `EMBEDDING_HOST_LLM_STUDIO` | `http://localhost:1234` | LLM Studio embedding host URL |
+| `EMBEDDING_PATH_LLM_STUDIO` | `v1/embeddings` | LLM Studio embedding API path |
+| `EMBEDDING_MODEL_LLM_STUDIO` | `nomic-embed-text-v1.5` | LLM Studio embedding model |
+| `EMBEDDING_DIMENSION_LLM_STUDIO` | `768` | LLM Studio embedding dimension |
+
+#### System Configuration
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DB_LOCATION` | `./faiss_index` | ChromaDB storage directory |
+| `COLLECTION_NAME` | `PizzaBoys` | ChromaDB collection name |
 | `DATA_FOLDER` | `./data` | Data directory path |
 | `ROLE_SYSTEM_CONTENT` | `You are a helpful assistant.` | System message |
 | `REBUILD_VECTOR` | `false` | Force rebuild vector store on startup |
+| `CHUNK_SIZE` | `500` | Document chunk size |
+| `CHUNK_OVERLAP` | `100` | Document chunk overlap |
+| `RETRIEVAL_TOP_K` | `5` | Number of documents to retrieve |
 
 ### Customization
 
@@ -249,14 +314,20 @@ retriever = vector_store.as_retriever(search_kwargs={"k": 10})  # Retrieve more 
 
 #### Using Different Models
 
-Update the environment variables:
+Update the environment variables based on your chosen engine:
 
+**For llama.cpp engine:**
 ```bash
-# Different chat model
-OLLAMA_MODEL=ai/llama3.1:latest
+LLM_HOST=LLAMA_CPP
+OLLAMA_MODEL_LLAMA_CPP=ai/llama3.1:latest
+EMBEDDING_MODEL_LLAMA_CPP=ai/nomic-embed-text:latest
+```
 
-# Different embedding model  
-EMBEDDING_MODEL=ai/nomic-embed-text:latest
+**For LLM Studio engine:**
+```bash
+LLM_HOST=LLM_STUDIO
+OLLAMA_MODEL_LLM_STUDIO=liquid/lfm2-1.5b
+EMBEDDING_MODEL_LLM_STUDIO=nomic-embed-text-v2:latest
 ```
 
 ## Troubleshooting
