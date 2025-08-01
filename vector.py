@@ -24,10 +24,12 @@ if EMBEDDING_HOST == "LLM_STUDIO":
     EMBEDDING_HOST = os.getenv("EMBEDDING_HOST_LLM_STUDIO")
     EMBEDDING_PATH = os.getenv("EMBEDDING_PATH_LLM_STUDIO")
     EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL_LLM_STUDIO")
+    EMBEDDING_DIMENSION = int(os.getenv("EMBEDDING_DIMENSION_LLM_STUDIO", "768"))
 else:
     EMBEDDING_HOST = os.getenv("EMBEDDING_HOST_LLAMA_CPP")
     EMBEDDING_PATH = os.getenv("EMBEDDING_PATH_LLAMA_CPP")
     EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL_LLAMA_CPP")
+    EMBEDDING_DIMENSION = int(os.getenv("EMBEDDING_DIMENSION_LLAMA_CPP", "1024"))
 
 
 # ─── Chunk size and overlap ────────────────────────────────────────────────
@@ -102,8 +104,13 @@ embeddings = LocalEmbeddings(
     is_llm_studio=(os.getenv("EMBEDDING_HOST") == "LLM_STUDIO")
 )
 
-# if the embeddings are successful I want to print the embeddings variable
-print(f"Embeddings: {embeddings}")
+# Print embedding configuration for debugging
+print(f"✅ Embedding Configuration:")
+print(f"   Host: {EMBEDDING_HOST}")
+print(f"   Model: {EMBEDDING_MODEL}")
+print(f"   Dimension: {EMBEDDING_DIMENSION}")
+print(f"   Is LLM Studio: {(os.getenv('EMBEDDING_HOST') == 'LLM_STUDIO')}")
+print(f"   Embeddings object: {embeddings}")
 
 def load_csv(path: str) -> list[Document]:
     print(f"Loading CSV file: {path}")
@@ -236,8 +243,7 @@ if add_documents:
 if os.path.exists(DB_LOCATION):
     vector_store = FAISS.load_local(DB_LOCATION, embeddings, allow_dangerous_deserialization=True)
 else:
-    dimension = 1024  # Dimension for mxbai-embed-large
-    index = faiss.IndexFlatL2(dimension)
+    index = faiss.IndexFlatL2(EMBEDDING_DIMENSION)
     vector_store = FAISS(
         embedding_function=embeddings,
         index=index,
