@@ -69,20 +69,31 @@ A **simple local RAG pipeline** with:
 
 ## 🔧 Current Architecture
 
-### Docker Model Runner Integration
+### Model Runner Integration
 
-The project now uses a Docker-based model runner instead of direct Ollama
-integration:
+The project supports two different model runner configurations:
 
-- **Custom HTTP Clients**: Direct HTTP communication with Docker model runner
+#### Option 1: llama.cpp Engine
+- **Host**: `http://localhost:12434`
+- **Chat Completions API**: `/engines/llama.cpp/v1/chat/completions`
+- **Embeddings API**: `/engines/llama.cpp/v1/embeddings`
+- **Default Chat Model**: `ai/llama3.2:latest`
+- **Default Embedding Model**: `ai/mxbai-embed-large:latest`
+
+#### Option 2: LLM Studio Engine
+- **Host**: `http://localhost:1234`
+- **Chat Completions API**: `/v1/chat/completions`
+- **Embeddings API**: `/v1/embeddings`
+- **Default Chat Model**: `liquid/lfm2-1.2b`
+- **Default Embedding Model**: `nomic-embed-text-v1.5`
+
+### Configuration Features
+
+- **Flexible Host Selection**: Choose between `LLAMA_CPP` or `LLM_STUDIO` via environment variables
+- **Custom HTTP Clients**: Direct HTTP communication with selected model runner
 - **LocalLLM Class**: Custom LangChain Runnable for Docker-hosted chat completions
 - **LocalEmbeddings Class**: Custom embedding client for Docker-hosted embeddings
 - **Environment Configuration**: Flexible configuration via `.env` file
-
-### API Endpoints
-
-- **Chat Completions**: `/engines/llama.cpp/v1/chat/completions`
-- **Embeddings**: `/engines/llama.cpp/v1/embeddings`
 
 ---
 
@@ -253,33 +264,86 @@ chain = prompt | llm
 3. Required environment variables in `.env`:
 
 ```bash
-# Docker model runner configuration
-LLM_HOST=http://localhost:12434
-EMBEDDING_HOST=http://localhost:12434
-DOCKER_HOST=http://localhost:12434
+# ────────────────────────────────────────────────────────────────────────────
+# -- Chat Settings ──────────────────────────────────────────────────────────
 
-# Model configuration
-OLLAMA_MODEL=ai/llama3.2:latest
-MODEL=ai/llama3.2:latest
-EMBEDDING_MODEL=ai/mxbai-embed-large:latest
+# ─── Chat host ─────────────────────────────────────────────────────────────
+LLM_HOST=LLM_STUDIO  # Options: LLAMA_CPP or LLM_STUDIO
 
-# Database configuration
-DB_LOCATION=./chrome_langchain_db
-COLLECTION_NAME=restaurant_reviews
-DATA_FOLDER=./data
+# ─── Chat host llama.cpp ────────────────────────────────────────────────────
+LLM_HOST_LLAMA_CPP=http://localhost:12434
+LLM_PATH_LLAMA_CPP=engines/llama.cpp/v1/chat/completions
+OLLAMA_MODEL_LLAMA_CPP=ai/llama3.2:latest
 
-# System configuration
+# ─── Chat host LLM Studio ────────────────────────────────────────────────────
+LLM_HOST_LLM_STUDIO=http://localhost:1234
+LLM_PATH_LLM_STUDIO=v1/chat/completions
+OLLAMA_MODEL_LLM_STUDIO=liquid/lfm2-1.2b
+
+# ─── System & Prompt ────────────────────────────────────────────────────────
 ROLE_SYSTEM_CONTENT=You are a helpful assistant.
+
+# ────────────────────────────────────────────────────────────────────────────
+# -- Embedding Settings ──────────────────────────────────────────────────────
+
+# ─── Embedding host ────────────────────────────────────────────────────────
+EMBEDDING_HOST=LLM_STUDIO  # Options: LLAMA_CPP or LLM_STUDIO
+
+# ─── Embedding host llama.cpp ─────────────────────────────────────────────
+EMBEDDING_HOST_LLAMA_CPP=http://localhost:12434
+EMBEDDING_PATH_LLAMA_CPP=llama.cpp/v1/embeddings
+EMBEDDING_MODEL_LLAMA_CPP=ai/mxbai-embed-large
+EMBEDDING_DIMENSION_LLAMA_CPP=1024
+
+# ─── Embedding host LLM Studio ─────────────────────────────────────────────
+EMBEDDING_HOST_LLM_STUDIO=http://localhost:1234
+EMBEDDING_PATH_LLM_STUDIO=v1/embeddings
+EMBEDDING_MODEL_LLM_STUDIO=nomic-embed-text-v1.5
+EMBEDDING_DIMENSION_LLM_STUDIO=768
+
+# ─── Vector store rebuild toggle ───────────────────────────────────────────
 REBUILD_VECTOR=false
+
+# ─── ChromaDB backend engine ───────────────────────────────────────────────
+DB_LOCATION="./faiss_index"
+COLLECTION_NAME="PizzaBoys"
+
+# ─── Data folder ────────────────────────────────────────────────────────────
+DATA_FOLDER="./data"
+
+# ─── Splitter settings ──────────────────────────────────────────────────────
+CHUNK_SIZE=500
+CHUNK_OVERLAP=100
+
+# ─── Top K for retrieval ───────────────────────────────────────────────────
+RETRIEVAL_TOP_K=5
 ```
 
 ### Testing
 
-Use the included test script to verify Docker model runner connectivity:
+Use the included test script to verify model runner connectivity:
 
 ```bash
 chmod +x dmodelrun.sh
 ./dmodelrun.sh
 ```
+
+### Switching Between Model Runners
+
+To switch between llama.cpp and LLM Studio engines:
+
+1. **For llama.cpp engine:**
+   ```bash
+   LLM_HOST=LLAMA_CPP
+   EMBEDDING_HOST=LLAMA_CPP
+   ```
+
+2. **For LLM Studio engine:**
+   ```bash
+   LLM_HOST=LLM_STUDIO
+   EMBEDDING_HOST=LLM_STUDIO
+   ```
+
+The system will automatically use the appropriate host URLs, API paths, and models based on your selection.
 
 ---
