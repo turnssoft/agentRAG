@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Employee IT Onboarding - Pizza Boys</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans", Ubuntu, "Droid Sans", "Helvetica Neue", sans-serif;
+            background-color: #F4F5F7;
+            color: #172B4D;
+        }
+        #confluence-container {
+            display: flex;
+            height: 100vh;
+        }
+        #confluence-sidebar {
+            width: 240px;
+            background-color: #F4F5F7;
+            border-right: 1px solid #DFE1E6;
+            padding: 24px;
+            box-sizing: border-box;
+            height: 100%;
+            overflow-y: auto;
+        }
+        #confluence-sidebar h3 {
+            font-size: 12px;
+            color: #6B778C;
+            text-transform: uppercase;
+            margin-top: 0;
+        }
+        #confluence-sidebar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        #confluence-sidebar ul li a {
+            display: block;
+            color: #42526E;
+            text-decoration: none;
+            padding: 8px 0;
+            font-size: 14px;
+            border-radius: 3px;
+        }
+        #confluence-sidebar ul li a:hover {
+            background-color: #EBECF0;
+        }
+        #confluence-sidebar ul li a.active {
+            background-color: #E6F0FF;
+            color: #0052CC;
+            font-weight: 600;
+        }
+        #main-content-wrapper {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 0;
+        }
+        #page-header {
+            background-color: #FFFFFF;
+            padding: 16px 40px;
+            border-bottom: 1px solid #DFE1E6;
+        }
+        #page-header .breadcrumbs {
+            font-size: 12px;
+            color: #6B778C;
+            margin-bottom: 8px;
+        }
+        #page-header .breadcrumbs a {
+            color: #0052CC;
+            text-decoration: none;
+        }
+        #page-header h1 {
+            font-size: 24px;
+            margin: 0;
+            color: #172B4D;
+        }
+        #page-metadata {
+            display: flex;
+            align-items: center;
+            margin-top: 16px;
+            font-size: 14px;
+        }
+        #page-metadata .author-avatar {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background-color: #36B37E;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            margin-right: 8px;
+        }
+        #page-content {
+            background-color: #FFFFFF;
+            max-width: 800px;
+            margin: 24px auto;
+            padding: 24px 40px;
+            border-radius: 3px;
+            box-shadow: 0 1px 1px rgba(9,30,66,0.25), 0 0 1px 1px rgba(9,30,66,0.13);
+        }
+        #page-content h2 {
+            font-size: 20px;
+            color: #172B4D;
+            border-bottom: 1px solid #DFE1E6;
+            padding-bottom: 8px;
+            margin-top: 32px;
+        }
+        #page-content h3 {
+            font-size: 16px;
+            color: #172B4D;
+            margin-top: 24px;
+        }
+        #page-content p, #page-content li {
+            line-height: 1.6;
+            font-size: 14px;
+        }
+        #page-content .task-list {
+            list-style: none;
+            padding-left: 0;
+        }
+        #page-content .task-list li {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        #page-content .task-list input[type="checkbox"] {
+            margin-right: 12px;
+            width: 16px;
+            height: 16px;
+        }
+        #page-content .success-panel {
+            background-color: #E3FCEF;
+            border-left: 3px solid #00875A;
+            margin: 16px 0;
+            padding: 8px 16px;
+        }
+        #page-content .warning-panel {
+            background-color: #FFFAE6;
+            border-left: 3px solid #FFAB00;
+            margin: 16px 0;
+            padding: 8px 16px;
+        }
+    </style>
+</head>
+<body>
+    <div id="confluence-container">
+        <aside id="confluence-sidebar">
+            <h3>IT Department</h3>
+            <ul>
+                <li><a href="#">🖥️ System Status</a></li>
+                <li><a href="#">🔑 Security Policies</a></li>
+                <li><a href="#" class="active">🚀 New Employee IT Onboarding</a></li>
+                <li><a href="#">Helpdesk Tickets</a></li>
+                <li><a href="#">Network Diagrams</a></li>
+            </ul>
+        </aside>
+        <main id="main-content-wrapper">
+            <header id="page-header">
+                <div class="breadcrumbs">
+                    <a href="#">Spaces</a> / <a href="#">IT Department (ITD)</a>
+                </div>
+                <h1>New Employee IT Onboarding Checklist</h1>
+                <div id="page-metadata">
+                    <div class="author-avatar" title="Gary IT">GI</div>
+                    <span>Created by <b>Gary IT</b>, Last modified on July 28, 2025</span>
+                </div>
+            </header>
+            <div id="page-content">
+                <div class="success-panel">
+                    <p><strong>Onboarding Target:</strong> New Store Manager | <strong>Employee Name:</strong> Jane Smith | <strong>Start Date:</strong> August 5, 2025</p>
+                </div>
+
+                <h2 id="phase1">Phase 1: Pre-Arrival (Due by EOD August 4)</h2>
+                <p>Tasks to be completed before the employee's first day.</p>
+                <h3>Account Provisioning</h3>
+                <ul class="task-list">
+                    <li><input type="checkbox" checked> Create Active Directory account (j.smith).</li>
+                    <li><input type="checkbox" checked> Create email account (jane.smith@pizzaboys.com).</li>
+                    <li><input type="checkbox" checked> Add user to 'StoreManagers' security group.</li>
+                    <li><input type="checkbox"> Provision access to 'DoughMaster POS' backend portal with Manager-level permissions.</li>
+                </ul>
+                <h3>Hardware Setup</h3>
+                <ul class="task-list">
+                    <li><input type="checkbox" checked> Image new Dell laptop with standard corporate image v3.2.</li>
+                    <li><input type="checkbox" checked> Install 'DoughMaster POS' client and 'InventoryManager' client.</li>
+                    <li><input type="checkbox"> Provision new company smartphone (iPhone 15).</li>
+                    <li><input type="checkbox"> Assign hardware assets in inventory system.</li>
+                </ul>
+
+                <h2 id="phase2">Phase 2: Day One (To be completed on August 5)</h2>
+                <p>Tasks for the employee's first day in the office.</p>
+                <div class="warning-panel">
+                    <p><strong>Security First!</strong> Do not provide passwords directly. Use the secure temporary password system and force a password change on first login.</p>
+                </div>
+                <h3>Welcome & Setup</h3>
+                <ul class="task-list">
+                    <li><input type="checkbox"> Deliver laptop and smartphone to the new employee.</li>
+                    <li><input type="checkbox"> Assist with first-time login and mandatory password reset.</li>
+                    <li><input type="checkbox"> Guide user through setting up Multi-Factor Authentication (MFA) on their smartphone.</li>
+                    <li><input type="checkbox"> Provide a brief tour of the PizzaNet intranet and helpdesk portal.</li>
+                </ul>
+
+                <h2 id="phase3">Phase 3: First Week (Due by EOD August 12)</h2>
+                <p>Follow-up tasks to ensure the employee is fully integrated.</p>
+                <h3>Training & Confirmation</h3>
+                <ul class="task-list">
+                    <li><input type="checkbox"> Confirm employee has completed the mandatory 'Cybersecurity Awareness' training module.</li>
+                    <li><input type="checkbox"> Schedule a 30-minute follow-up meeting to answer any IT-related questions.</li>
+                    <li><input type="checkbox"> Verify that access to all required systems is working as expected.</li>
+                </ul>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

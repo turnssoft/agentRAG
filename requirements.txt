@@ -8,3 +8,5 @@ langchain-ollama
 langchain-community
 unstructured[md]
 nltk
+faiss-cpu
+faiss-cpu
