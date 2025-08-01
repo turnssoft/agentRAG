@@ -1,4 +1,4 @@
-# main.py
+                                           # main.py
 
 import os
 import requests
@@ -10,9 +10,16 @@ from vector import retriever
 # ─── Load environment variables ───────────────────────────────────────────────
 load_dotenv()
 
-LLM_HOST            = os.getenv("LLM_HOST", "http://localhost:12434")
-LLM_ENGINE          = os.getenv("LLM_ENGINE", "llama.cpp")
-MODEL_NAME          = os.getenv("OLLAMA_MODEL", "ai/llama3.2:latest")
+LLM_HOST            = os.getenv("LLM_HOST")
+# if LLM_STUDIO then LLM_HOST_LLM_STUDIO ELSE LLM_HOST_LLAMA_CPP
+if LLM_HOST == "LLM_STUDIO":
+    LLM_HOST = os.getenv("LLM_HOST_LLM_STUDIO")
+    LLM_ENGINE = os.getenv("LLM_ENGINE_LLM_STUDIO")
+    MODEL_NAME = os.getenv("OLLAMA_MODEL_LLM_STUDIO")
+else:
+    LLM_HOST = os.getenv("LLM_HOST_LLAMA_CPP")
+    LLM_ENGINE = os.getenv("LLM_ENGINE_LLAMA_CPP")
+    MODEL_NAME = os.getenv("OLLAMA_MODEL_LLAMA_CPP")
 SYSTEM_CONTENT      = os.getenv("ROLE_SYSTEM_CONTENT", "You are a helpful assistant.")
 
 # ─── Load prompt template ────────────────────────────────────────────────────

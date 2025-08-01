@@ -3,20 +3,32 @@
 import os
 import shutil
 import yaml
+import datetime
+import pandas as pd
+import requests
+import faiss
 from dotenv import load_dotenv
 
 # ─── Load environment variables ──────────────────────────────────────────────
 load_dotenv()
-DB_LOCATION     = os.getenv("DB_LOCATION", "./chrome_langchain_db")
+DB_LOCATION     = os.getenv("DB_LOCATION", "./faiss_index")  # Update if desired
 
 # ─── Collection and data folder locations ─────────────────────────────────
-COLLECTION_NAME = os.getenv("COLLECTION_NAME", "restaurant_reviews")
+COLLECTION_NAME = os.getenv("COLLECTION_NAME", "restaurant_reviews")  # Not used in FAISS
 DATA_FOLDER     = os.getenv("DATA_FOLDER", "./data")
 
 # ─── Embedding service configuration ───────────────────────────────────────
-EMBEDDING_HOST   = os.getenv("EMBEDDING_HOST", "http://localhost:12434")
-EMBEDDING_ENGINE = os.getenv("EMBEDDING_ENGINE", "llama.cpp")
-EMBEDDING_MODEL  = os.getenv("EMBEDDING_MODEL", "ai/mxbai-embed-large:latest")
+EMBEDDING_HOST   = os.getenv("EMBEDDING_HOST")
+# if LLM_STUDIO then EMBEDDING_HOST_LLM_STUDIO ELSE EMBEDDING_HOST_LLAMA_CPP
+if EMBEDDING_HOST == "LLM_STUDIO":
+    EMBEDDING_HOST = os.getenv("EMBEDDING_HOST_LLM_STUDIO")
+    EMBEDDING_PATH = os.getenv("EMBEDDING_PATH_LLM_STUDIO")
+    EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL_LLM_STUDIO")
+else:
+    EMBEDDING_HOST = os.getenv("EMBEDDING_HOST_LLAMA_CPP")
+    EMBEDDING_PATH = os.getenv("EMBEDDING_PATH_LLAMA_CPP")
+    EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL_LLAMA_CPP")
+
 
 # ─── Chunk size and overlap ────────────────────────────────────────────────
 CHUNK_SIZE     = int(os.getenv("CHUNK_SIZE", 1000))
@@ -28,19 +40,16 @@ TOP_K = int(os.getenv("RETRIEVAL_TOP_K", "3"))
 # ─── Toggle to rebuild the vector store on each run ────────────────────────
 REBUILD_FLAG     = os.getenv("REBUILD_VECTOR", "false").lower() in ("1", "true", "yes")
 
-# ─── Prepare or rebuild local ChromaDB files ───────────────────────────────
+# ─── Prepare or rebuild local FAISS files ──────────────────────────────────
 if REBUILD_FLAG and os.path.exists(DB_LOCATION):
     shutil.rmtree(DB_LOCATION, ignore_errors=True)
 add_documents = not os.path.exists(DB_LOCATION)
 
 # ─── Standard imports ──────────────────────────────────────────────────────
-import datetime
-import pandas as pd
-import requests
-from langchain_chroma import Chroma
+from langchain_community.vectorstores import FAISS
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.vectorstores.utils import filter_complex_metadata
+from langchain_core.embeddings import Embeddings
 from langchain_community.document_loaders import (
     PythonLoader,
     TextLoader,
@@ -51,24 +60,32 @@ from langchain_community.document_loaders import (
 from pathlib import Path
 
 # ─── Custom Embeddings via HTTP ────────────────────────────────────────────
-class LocalEmbeddings:
-    def __init__(self, host: str, engine: str, model: str):
-        self.url = f"{host}/engines/{engine}/v1/embeddings"
+class LocalEmbeddings(Embeddings):
+    def __init__(self, host: str, path: str, model: str, is_llm_studio: bool = False):
+        self.url = f"{host}/{path}"
         self.model = model
+        self.is_llm_studio = is_llm_studio
 
     def _embed(self, text: str) -> list[float]:
         payload = {"model": self.model, "input": text}
+        
+        # Set up headers - only add Authorization for LLM Studio
+        headers = {"Content-Type": "application/json"}
+        if self.is_llm_studio:
+            headers["Authorization"] = "Bearer lm-studio"
+            
         try:
             resp = requests.post(
                 self.url,
                 json=payload,
-                headers={"Content-Type": "application/json"}
+                headers=headers
             )
             resp.raise_for_status()
             data = resp.json()
             return data.get("data", [{}])[0].get("embedding", [])
         except Exception as e:
             print(f"\n❌ Embedding failed.\nText (truncated): {text[:200]}...\nChars: {len(text)}\n")
+            print(f"Error: {e}")
             raise
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
@@ -80,9 +97,13 @@ class LocalEmbeddings:
 # Instantiate the embedding client
 embeddings = LocalEmbeddings(
     host=EMBEDDING_HOST,
-    engine=EMBEDDING_ENGINE,
-    model=EMBEDDING_MODEL
+    path=EMBEDDING_PATH,
+    model=EMBEDDING_MODEL,
+    is_llm_studio=(os.getenv("EMBEDDING_HOST") == "LLM_STUDIO")
 )
+
+# if the embeddings are successful I want to print the embeddings variable
+print(f"Embeddings: {embeddings}")
 
 def load_csv(path: str) -> list[Document]:
     print(f"Loading CSV file: {path}")
@@ -94,6 +115,7 @@ def load_csv(path: str) -> list[Document]:
         print(f"\n❌ CSV loader failed ({e}), falling back to TextLoader")
         loader = TextLoader(path, encoding="utf-8")
         return loader.load_and_split()
+
 def load_python(path: str) -> list[Document]:
     print(f"Loading Python file: {path}")
     try:
@@ -121,6 +143,7 @@ def load_python(path: str) -> list[Document]:
         raw_docs = loader.load()
         splitter = RecursiveCharacterTextSplitter(chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP)
         return splitter.split_documents(raw_docs)
+
 def load_yaml(path: str) -> list[Document]:
     try:
         loader = TextLoader(path, encoding="utf-8")
@@ -132,6 +155,7 @@ def load_yaml(path: str) -> list[Document]:
         raw_docs = loader.load()
         splitter = RecursiveCharacterTextSplitter(chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP)
         return splitter.split_documents(raw_docs)
+
 def load_ansible_yaml(path: str) -> list[Document]:
     print(f"Parsing Ansible YAML: {path}")
     documents = []
@@ -162,6 +186,7 @@ def load_ansible_yaml(path: str) -> list[Document]:
             )
             documents.append(doc)
     return documents
+
 def load_markdown(path: str) -> list[Document]:
     print(f"Loading markdown file: {path}")
     try:
@@ -173,6 +198,7 @@ def load_markdown(path: str) -> list[Document]:
         print(f"\n ❌ Markdown loader failed ({e}), falling back to TextLoader")
         loader = TextLoader(path, encoding="utf-8")
         return loader.load_and_split()
+
 def load_html(path: str) -> list[Document]:
     print(f"Loading HTML file: {path}")
     try:
@@ -206,12 +232,18 @@ if add_documents:
                 except Exception as e:
                     print(f"Failed to load {file_path}: {e}")
 
-# ─── Initialize Chroma client and build/open vector store ──────────────────
-vector_store = Chroma(
-    collection_name=COLLECTION_NAME,
-    embedding_function=embeddings,
-    persist_directory=DB_LOCATION
-)
+# ─── Initialize FAISS vector store ─────────────────────────────────────────
+if os.path.exists(DB_LOCATION):
+    vector_store = FAISS.load_local(DB_LOCATION, embeddings, allow_dangerous_deserialization=True)
+else:
+    dimension = 1024  # Dimension for mxbai-embed-large
+    index = faiss.IndexFlatL2(dimension)
+    vector_store = FAISS(
+        embedding_function=embeddings,
+        index=index,
+        docstore={},
+        index_to_docstore_id={}
+    )
 
 if add_documents and documents:
     for i, doc in enumerate(documents):
@@ -223,12 +255,13 @@ if add_documents and documents:
         print(f"  → content: {doc.page_content}")
         print(f"  → metadata: {doc.metadata}")
         try:
-            doc.metadata = filter_complex_metadata(doc.metadata)
+            # No need for filter_complex_metadata with FAISS
             vector_store.add_documents([doc])
         except Exception as e:
             print(f"\n❌ Failed to add document #{i}")
             print(f"  → Metadata: {doc.metadata}")
             print(f"  → Error: {e}")
+    vector_store.save_local(DB_LOCATION)
 
 # ─── Retriever ─────────────────────────────────────────────────────────────
 retriever = vector_store.as_retriever(search_kwargs={"k": TOP_K})
