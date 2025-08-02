@@ -3,8 +3,8 @@ import os
 import requests
 from dotenv import load_dotenv
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.runnables import Runnable, RunnablePassthrough
-from langchain_core.documents import Document  # Import Document
+from langchain_core.runnables import Runnable, RunnablePassthrough, RunnableLambda
+from langchain_core.documents import Document
 from vector import retriever
 from logger import AgentLogger
 
@@ -47,13 +47,10 @@ except FileNotFoundError:
     raise
 
 # --- Custom LLM Runnable ---
-# (This class remains the same)
+# (This class is now correct)
 class LocalLLM(Runnable):
-    def invoke(self, input):
-        # The 'input' here is now a fully formed prompt from the previous step in the chain
-        prompt_value = input
+    def invoke(self, prompt_value, config=None):
         prompt_text = prompt_value.to_string()
-        
         url = f"{LLM_HOST}/{LLM_PATH}"
         logger.debug(f"Sending request to LLM: {url}")
         payload = {
@@ -78,42 +75,56 @@ class LocalLLM(Runnable):
 
 model = LocalLLM()
 
-# --- NEW: Document Formatting Function ---
-def format_docs(docs: list[Document]) -> str:
+# --- NEW: Refined Document Processing Function ---
+def process_retrieved_documents(data: dict) -> dict:
     """
-    Formats a list of documents into a single string for the prompt.
-    Includes the review content and key metadata for clarity.
+    Takes the retrieved docs and the question, filters the docs,
+    formats them, and returns a dictionary ready for the prompt.
     """
-    logger.debug(f"Formatting {len(docs)} documents for prompt context.")
-    formatted_strings = []
-    for doc in docs:
-        # Extract metadata with defaults in case they are missing
-        title = doc.metadata.get('title', 'N/A')
-        rating = doc.metadata.get('rating', 'N/A')
-        
-        # Create a clean, readable string for each document
-        formatted_string = (
-            f"Review: {doc.page_content}\n"
-            f"Title: {title}\n"
-            f"Rating: {rating}"
-        )
-        formatted_strings.append(formatted_string)
-    
-    # Join all formatted strings with a clear separator
-    return "\n\n---\n\n".join(formatted_strings)
+    docs = data['docs']
+    question = data['question']
+    logger.debug(f"Filtering {len(docs)} documents based on question: '{question}'")
 
-# --- NEW: Idiomatic LCEL RAG Chain ---
-# This chain defines the entire RAG process in a clear, readable way.
+    pizza_keywords = ["meat lovers", "volcano", "pepperoni", "margherita", "four cheese"]
+    relevant_keyword = next((kw for kw in pizza_keywords if kw in question.lower()), None)
+    
+    filtered_docs = docs
+    if relevant_keyword:
+        logger.info(f"Found relevant keyword: '{relevant_keyword}'. Filtering documents...")
+        filtered_docs = [
+            doc for doc in docs 
+            if 'title' in doc.metadata and relevant_keyword in doc.metadata['title'].lower()
+        ]
+    else:
+        logger.info("No specific pizza keyword found. Using all retrieved documents.")
+
+    logger.info(f"Found {len(filtered_docs)} relevant documents after filtering.")
+
+    # Format the filtered documents into a single string for the context
+    formatted_context = "\n\n---\n\n".join([
+        f"Review: {doc.page_content}\n"
+        f"Title: {doc.metadata.get('title', 'N/A')}\n"
+        f"Rating: {doc.metadata.get('rating', 'N/A')}"
+        for doc in filtered_docs
+    ])
+    
+    # **THIS IS THE KEY FIX**: Return a dictionary that matches the prompt's input variables
+    return {"reviews": formatted_context, "question": question}
+
+# --- NEW: Correct and Final LCEL RAG Chain ---
 rag_chain = (
-    {"reviews": retriever | format_docs, "question": RunnablePassthrough()}
+    # Step 1: Create a dictionary with the original question and the retrieved documents
+    {"docs": retriever, "question": RunnablePassthrough()}
+    # Step 2: Pass this dictionary to our processing function
+    | RunnableLambda(process_retrieved_documents)
+    # Step 3: The output of our function is now a correctly formatted dictionary for the prompt
     | prompt
+    # Step 4: Pass the populated prompt to the model
     | model
 )
 
 def run_query(question: str) -> str:
-    """
-    Invokes the RAG chain with the user's question.
-    """
+    """Invokes the RAG chain with the user's question."""
     logger.info(f"Processing question: '{question[:50]}{'...' if len(question) > 50 else ''}'")
     try:
         response = rag_chain.invoke(question)
@@ -121,9 +132,9 @@ def run_query(question: str) -> str:
         return response
     except Exception as e:
         logger.error(f"❌ Error invoking RAG chain: {e}")
-        # Re-raise the exception to be handled in the main loop
         raise
 
+# --- main() function remains the same ---
 def main():
     logger.info("🚀 Starting agentRAG interactive session")
     logger.info("Type 'q' to quit")
@@ -141,7 +152,6 @@ def main():
                 continue
                 
             try:
-                # Use the new chain invocation function
                 response = run_query(q)
                 print("\n💡 Response:\n" + response)
             except Exception as e:
@@ -155,6 +165,5 @@ def main():
     finally:
         logger.info("📝 Session ended")
 
-# --- CLI Loop ---
 if __name__ == "__main__":
     main()
